@@ -22,8 +22,9 @@ class Velocity extends Component {
     }
 }
 class BoxShape extends Component {
-    constructor(width, height) {
+    constructor(width, height, color = "#cccccc") {
         super("box-shape");
+        this.color = color;
         this.width = width;
         this.height = height;
     }
@@ -38,11 +39,23 @@ class Player extends Entity {
 }
 function createPlayer() {
     const player = new Player();
-    player.components.push(new Position(100, 100));
-    player.components.push(new Velocity(200));
-    player.components.push(new BoxShape(16, 24));
+    player.components.push(new Position(canvas.width / 2, canvas.height / 2));
+    player.components.push(new Velocity(300));
+    player.components.push(new BoxShape(16, 24, "#ff0000"));
     player.components.push(new Movable());
     return player;
+}
+class Obstacle extends Entity {
+}
+function createObstacle() {
+    const obstacle = new Obstacle();
+    const width = Math.random() * 100 + 50;
+    const height = Math.random() * 100 + 50;
+    const x = Math.random() * (canvas.width - 16) - (width / 2);
+    const y = Math.random() * (canvas.height - 16) - (height / 2);
+    obstacle.components.push(new Position(x, y));
+    obstacle.components.push(new BoxShape(width, height));
+    return obstacle;
 }
 /** Systems */
 class InputSystem extends System {
@@ -106,7 +119,7 @@ class BoxShapeRenderer extends System {
             const position = entity.getComponent("position");
             const boxShape = entity.getComponent("box-shape");
             if (position && boxShape) {
-                context.fillStyle = "#ff0000";
+                context.fillStyle = boxShape.color;
                 context.fillRect(position.x, position.y, boxShape.width, boxShape.height);
             }
         });
@@ -117,8 +130,12 @@ const scene = new Scene();
 scene.systems.push(new InputSystem(scene));
 scene.systems.push(new MovementSystem(scene));
 scene.systems.push(new BoxShapeRenderer(scene));
-const player = createPlayer();
-scene.entities.push(player);
+scene.entities.push(createPlayer());
+scene.entities.push(createObstacle());
+scene.entities.push(createObstacle());
+scene.entities.push(createObstacle());
+scene.entities.push(createObstacle());
+scene.entities.push(createObstacle());
 // TODO: init system in scene.regiser ?
 scene.systems.forEach(system => {
     system.init();
