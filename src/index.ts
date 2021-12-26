@@ -1,4 +1,4 @@
-import Player from "./player"
+import Player from "./player.js"
 
 const throwIfNull = <T>(value: T | null, failureMessage: string) => {
   if (value === null) {
@@ -8,10 +8,15 @@ const throwIfNull = <T>(value: T | null, failureMessage: string) => {
   return value
 }
 
+// ---------------------------------------------
+
 const canvas = throwIfNull(
   document.body.querySelector<HTMLCanvasElement>("#canvas1"),
   "Canvas could not be found"
 )
+
+canvas.width = 800
+canvas.height = 600
 
 const context = throwIfNull(
   canvas.getContext("2d"),
@@ -20,7 +25,7 @@ const context = throwIfNull(
 
 // ---------------------------------------------
 
-const player = new Player(canvas.width / 2 - 50, canvas.height - 50)
+const player = new Player(canvas.width / 2 , canvas.height / 2)
 
 // ---------------------------------------------
 
@@ -39,6 +44,6 @@ function loop(time: number) {
   requestAnimationFrame(loop)
 }
 
-// loop(0)
+loop(0)
 
 

@@ -1,5 +1,8 @@
 # Refs
 
+- https://blog.mozvr.com/introducing-ecsy/
+
+- https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
 
 https://www.youtube.com/watch?v=kpiO5-BtX4I&t=2258s&ab_channel=ArmadaJS-JavaScriptconference
 - https://github.com/jamesseanwright/ts-pac-man/tree/master/src
