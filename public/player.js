@@ -1,3 +1,4 @@
+// https://github.com/grebaldi/nopun-ecs/blob/master/examples/ultimate-space-rock-eliminator-9000/src/entity/Player/Player.ts
 export default class Player {
     constructor(x, y) {
         this.width = 16;
