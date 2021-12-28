@@ -1,6 +1,8 @@
 # Refs
 
 ## ECS
+- https://itnext.io/entity-component-system-in-action-with-typescript-f498ca82a08e
+- https://maxwellforbes.com/posts/typescript-ecs-implementation
 - https://github.com/grebaldi/nopun-ecs
 - https://ecsy.io/docs/#/
 - https://blog.mozvr.com/introducing-ecsy/
