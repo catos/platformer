@@ -1,4 +1,6 @@
 import { Component, Entity, Scene, System } from "./ecs/ecs2.js"
+import { AABBCollision, Rectangle } from "./lib/aabbcollision.js"
+import { randomBetween } from "./lib/random.js"
 import throwIfNull from "./lib/throw-if-null.js"
 
 /** Canvas */
@@ -28,6 +30,14 @@ class Velocity implements Component {
 }
 
 class Movable implements Component {}
+
+class Collider implements Component {
+  constructor(
+    public width: number,
+    public height: number,
+    public isColliding: boolean = false
+  ) {}
+}
 
 class Shape implements Component {
   constructor(
@@ -64,6 +74,16 @@ class Renderer extends System {
 
         context.fillStyle = shape.color
         context.fillRect(position.x, position.y, shape.width, shape.height)
+
+        if (entity.has(Collider)) {
+          const collider = entity.get(Collider)
+
+          if (collider.isColliding) {
+            context.strokeStyle = "#FFFF00"
+            context.lineWidth = 2
+            context.strokeRect(position.x, position.y, collider.width, collider.height)
+          }
+        }
       })
   }
 }
@@ -110,6 +130,44 @@ class InputSystem extends System {
   }
 }
 
+class CollisionSystem extends System {
+  update(dt: number): void {
+    const entities = this.scene.entities.filter((p) =>
+      p.hasAll(new Set<Function>([Collider, Position]))
+    )
+
+    entities.forEach((entity) => {
+      const myCollider = entity.get(Collider)
+      const myPosition = entity.get(Position)
+      const rect1: Rectangle = {
+        ...myPosition,
+        w: myCollider.width,
+        h: myCollider.height,
+      }
+
+      entities
+        .filter((p) => p !== entity)
+        .forEach((other) => {
+          const otherCollider = other.get(Collider)
+          const otherPosition = other.get(Position)
+
+          const rect2: Rectangle = {
+            ...otherPosition,
+            w: otherCollider.width,
+            h: otherCollider.height,
+          }
+
+          // TODO: hmm, maybe set isColliding = false another place ?
+          if (AABBCollision(rect1, rect2)) {
+            myCollider.isColliding = true
+          } else {
+            myCollider.isColliding = false
+          }
+        })
+    })
+  }
+}
+
 /** Init scene */
 
 const scene = new Scene()
@@ -119,16 +177,34 @@ player.add(new Position(100, 100))
 player.add(new Velocity(0, 0))
 player.add(new Shape(32, 32, "red"))
 player.add(new Movable())
-
-const thing = new Entity()
-thing.add(new Position(256, 256))
-thing.add(new Shape(64, 64))
-
+player.add(new Collider(32, 32))
 scene.addEntity(player)
-scene.addEntity(thing)
+
+function createThing() {
+  const thing = new Entity()
+  
+  const width = randomBetween(10, 50)
+  const height = randomBetween(10, 50)
+  const x = randomBetween(0, canvas.width - width)
+  const y = randomBetween(0, canvas.height - height)
+
+  console.log(x, y, width, height);
+  
+  thing.add(new Position(x, y))
+  thing.add(new Shape(width, height))
+  thing.add(new Collider(width, height))
+  return thing
+}
+
+scene.addEntity(createThing())
+scene.addEntity(createThing())
+scene.addEntity(createThing())
+scene.addEntity(createThing())
+
 scene.addSystem(new InputSystem(scene))
 scene.addSystem(new Renderer(scene))
 scene.addSystem(new MovementSystem(scene))
+scene.addSystem(new CollisionSystem(scene))
 
 /** Tests */
 
@@ -151,4 +227,4 @@ function loop(time: number) {
   requestAnimationFrame(loop)
 }
 
-loop(0)
+// loop(0)
