@@ -25,18 +25,21 @@ class Position implements Component {
 }
 
 class Velocity implements Component {
-  speed = 200
+  speed = 100
   constructor(public x: number, public y: number) {}
 }
 
 class Movable implements Component {}
 
 class Collider implements Component {
-  constructor(
-    public width: number,
-    public height: number,
-    public isColliding: boolean = false
-  ) {}
+  width: number
+  height: number
+  isColliding: boolean
+  constructor(width: number, height: number, isColliding: boolean = false) {
+    this.width = width
+    this.height = height
+    this.isColliding = isColliding
+  }
 }
 
 class Shape implements Component {
@@ -79,9 +82,14 @@ class Renderer extends System {
           const collider = entity.get(Collider)
 
           if (collider.isColliding) {
-            context.strokeStyle = "#FFFF00"
+            context.strokeStyle = "#0000ff"
             context.lineWidth = 2
-            context.strokeRect(position.x, position.y, collider.width, collider.height)
+            context.strokeRect(
+              position.x,
+              position.y,
+              collider.width,
+              collider.height
+            )
           }
         }
       })
@@ -136,9 +144,11 @@ class CollisionSystem extends System {
       p.hasAll(new Set<Function>([Collider, Position]))
     )
 
-    entities.forEach((entity) => {
-      const myCollider = entity.get(Collider)
+    entities.forEach((entity) => {      
       const myPosition = entity.get(Position)
+      const myCollider = entity.get(Collider)
+      myCollider.isColliding = false
+
       const rect1: Rectangle = {
         ...myPosition,
         w: myCollider.width,
@@ -160,11 +170,24 @@ class CollisionSystem extends System {
           // TODO: hmm, maybe set isColliding = false another place ?
           if (AABBCollision(rect1, rect2)) {
             myCollider.isColliding = true
-          } else {
-            myCollider.isColliding = false
           }
         })
     })
+  }
+}
+
+class DebugSystem extends System {
+  update(dt: number): void {
+    
+    // this.scene.debug.set(`Coll (${entity.id}, ${other.id})`, coll.toString())
+
+    let i = 1
+    for (const [key, value] of this.scene.debug) {
+      context.fillStyle = "black"
+      context.font = "12px monospace"
+      context.fillText(`${key}: ${value}`, 20, i * 20)
+      i++
+    }
   }
 }
 
@@ -172,46 +195,42 @@ class CollisionSystem extends System {
 
 const scene = new Scene()
 
-const player = new Entity()
-player.add(new Position(100, 100))
+const player = new Entity(1)
+player.add(new Position(200, 200))
 player.add(new Velocity(0, 0))
-player.add(new Shape(32, 32, "red"))
+player.add(new Shape(16, 24, "red"))
 player.add(new Movable())
-player.add(new Collider(32, 32))
+player.add(new Collider(16, 24))
 scene.addEntity(player)
 
-function createThing() {
-  const thing = new Entity()
-  
-  const width = randomBetween(10, 50)
-  const height = randomBetween(10, 50)
-  const x = randomBetween(0, canvas.width - width)
-  const y = randomBetween(0, canvas.height - height)
+function createThing(id: number, x: number, y: number) {
+  const thing = new Entity(id)
 
-  console.log(x, y, width, height);
-  
+  const width = 20
+  const height = 20
+  // const width = randomBetween(10, 50)
+  // const height = randomBetween(10, 50)
+  // const x = randomBetween(0, canvas.width - width)
+  // const y = randomBetween(0, canvas.height - height)
+
   thing.add(new Position(x, y))
   thing.add(new Shape(width, height))
   thing.add(new Collider(width, height))
   return thing
 }
 
-scene.addEntity(createThing())
-scene.addEntity(createThing())
-scene.addEntity(createThing())
-scene.addEntity(createThing())
+scene.addEntity(createThing(2, 210, 210))
+scene.addEntity(createThing(3, 225, 225))
 
 scene.addSystem(new InputSystem(scene))
-scene.addSystem(new Renderer(scene))
 scene.addSystem(new MovementSystem(scene))
+scene.addSystem(new Renderer(scene))
 scene.addSystem(new CollisionSystem(scene))
+scene.addSystem(new DebugSystem(scene))
 
 /** Tests */
 
-const test = scene.entities.filter((p) =>
-  p.hasAll(new Set<Function>([Position]))
-)
-console.log(test)
+// ...
 
 /** Game loop */
 
@@ -227,4 +246,4 @@ function loop(time: number) {
   requestAnimationFrame(loop)
 }
 
-// loop(0)
+loop(0)

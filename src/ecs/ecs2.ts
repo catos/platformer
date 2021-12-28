@@ -3,7 +3,12 @@ export class Component {}
 type ComponentClass<T extends Component> = new (...args: any[]) => T
 
 export class Entity {
+  id: number
   private map = new Map<Function, Component>()
+
+  constructor(id: number) {
+    this.id = id
+  }
 
   public add(component: Component): void {
     this.map.set(component.constructor, component)
@@ -12,6 +17,11 @@ export class Entity {
   public get<T extends Component>(componentClass: ComponentClass<T>): T {
     return this.map.get(componentClass) as T
   }
+
+  // TODO: add convenient method for fetching multiple components
+  // public getM<T extends Component>(css: ComponentClass<T>[]): T[] {
+  //   return css.map((cs) => this.map.get(cs) as T)
+  // }
 
   public has(componentClass: Function): boolean {
     return this.map.has(componentClass)
@@ -37,8 +47,10 @@ export abstract class System {
 }
 
 export class Scene {
-
+  
+  debug: Map<string, string> = new Map()
   entities: Entity[] = []
+
   // TODO: create systems with components to monitor ? need to update systems alot ?
   // new Map<System, Set<Component>>()
   private systems: System[] = []
@@ -54,6 +66,6 @@ export class Scene {
   }
 
   public update(dt: number): void {
-    this.systems.forEach(system => system.update(dt))
+    this.systems.forEach((system) => system.update(dt))
   }
 }

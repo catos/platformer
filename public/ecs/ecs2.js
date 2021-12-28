@@ -1,8 +1,9 @@
 export class Component {
 }
 export class Entity {
-    constructor() {
+    constructor(id) {
         this.map = new Map();
+        this.id = id;
     }
     add(component) {
         this.map.set(component.constructor, component);
@@ -10,6 +11,10 @@ export class Entity {
     get(componentClass) {
         return this.map.get(componentClass);
     }
+    // TODO: add convenient method for fetching multiple components
+    // public getM<T extends Component>(css: ComponentClass<T>[]): T[] {
+    //   return css.map((cs) => this.map.get(cs) as T)
+    // }
     has(componentClass) {
         return this.map.has(componentClass);
     }
@@ -32,6 +37,7 @@ export class System {
 }
 export class Scene {
     constructor() {
+        this.debug = new Map();
         this.entities = [];
         // TODO: create systems with components to monitor ? need to update systems alot ?
         // new Map<System, Set<Component>>()
@@ -46,6 +52,6 @@ export class Scene {
         this.systems.push(system);
     }
     update(dt) {
-        this.systems.forEach(system => system.update(dt));
+        this.systems.forEach((system) => system.update(dt));
     }
 }
