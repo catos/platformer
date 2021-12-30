@@ -1,32 +1,69 @@
-export class Scene {
-  // TODO: register & unregister (and implement chaining?)
-  systems: System[] = []
-  entities: Entity[] = []
+export class Component {}
+
+type ComponentClass<T extends Component> = new (...args: any[]) => T
+
+export class Entity {
+  id: number
+  private components = new Map<Function, Component>()
+
+  constructor(id: number) {
+    this.id = id
+  }
+
+  public add(component: Component): void {
+    this.components.set(component.constructor, component)
+  }
+
+  public get<T extends Component>(componentClass: ComponentClass<T>): T {
+    return this.components.get(componentClass) as T
+  }
+
+  // TODO: add convenient method for fetching multiple components
+  // public getM<T extends Component>(css: ComponentClass<T>[]): T[] {
+  //   return css.map((cs) => this.map.get(cs) as T)
+  // }
+
+  public has(componentClass: Function): boolean {
+    return this.components.has(componentClass)
+  }
+
+  public hasAll(componentClasses: Iterable<Function>): boolean {
+    for (let cls of componentClasses) {
+      if (!this.components.has(cls)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  public delete(componentClass: Function): void {
+    this.components.delete(componentClass)
+  }
 }
 
 export abstract class System {
-  protected readonly scene: Scene
-
-  constructor(scene: Scene) {
-    this.scene = scene
-  }
-
-  init() {}
-  abstract execute(deltaTime: number): void
+  constructor(protected scene: Scene) {}
+  abstract update(dt: number): void
 }
 
-export abstract class Entity {
-  components: Component[] = []
+export class Scene {
+  entities: Entity[] = []
 
-  getComponent(name: string): Component | undefined {
-    return this.components.find(p => p.name === name)
+  // TODO: create systems with components to monitor ? need to update systems alot ?
+  // new Map<System, Set<Component>>()
+  private systems: System[] = []
+
+  // TODO: add validation ?
+  public addEntity(entity: Entity) {
+    this.entities.push(entity)
   }
-}
 
-export abstract class Component {
-  name: string
+  // TODO: validate system, needs componentsRequired and more ?
+  public addSystem(system: System): void {
+    this.systems.push(system)
+  }
 
-  constructor(name: string) {
-    this.name = name
+  public update(dt: number): void {
+    this.systems.forEach((system) => system.update(dt))
   }
 }
