@@ -1,5 +1,5 @@
-export default class Vector2 {
-  static ZERO = new Vector2(0, 0)
+export default class Vector {
+  static ZERO = new Vector(0, 0)
 
   x: number
   y: number
@@ -17,27 +17,27 @@ export default class Vector2 {
     return this.scale(1 / this.magnitude())
   }
 
-  add(b: Vector2) {
-    return new Vector2(this.x + b.x, this.y + b.y)
+  add(b: Vector) {
+    return new Vector(this.x + b.x, this.y + b.y)
   }
 
-  subtract(b: Vector2) {
-    return new Vector2(this.x - b.x, this.y - b.y)
+  subtract(b: Vector) {
+    return new Vector(this.x - b.x, this.y - b.y)
   }
 
   scale(kx: number, ky = kx) {
-    return new Vector2(this.x * kx, this.y * ky)
+    return new Vector(this.x * kx, this.y * ky)
   }
 
-  dot(b: Vector2) {
+  dot(b: Vector) {
     return this.x * b.x + this.y * b.y
   }
 
-  equalTo(b: Vector2) {
+  equalTo(b: Vector) {
     return this.x === b.x && this.y === b.y
   }
 
-  distance = (b: Vector2) => {
+  distance = (b: Vector) => {
     return Math.hypot(b.x - this.x, b.y - this.y)
   }
 }

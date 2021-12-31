@@ -1,4 +1,4 @@
-export default class Vector2 {
+export default class Vector {
     constructor(x, y) {
         this.distance = (b) => {
             return Math.hypot(b.x - this.x, b.y - this.y);
@@ -13,13 +13,13 @@ export default class Vector2 {
         return this.scale(1 / this.magnitude());
     }
     add(b) {
-        return new Vector2(this.x + b.x, this.y + b.y);
+        return new Vector(this.x + b.x, this.y + b.y);
     }
     subtract(b) {
-        return new Vector2(this.x - b.x, this.y - b.y);
+        return new Vector(this.x - b.x, this.y - b.y);
     }
     scale(kx, ky = kx) {
-        return new Vector2(this.x * kx, this.y * ky);
+        return new Vector(this.x * kx, this.y * ky);
     }
     dot(b) {
         return this.x * b.x + this.y * b.y;
@@ -28,4 +28,4 @@ export default class Vector2 {
         return this.x === b.x && this.y === b.y;
     }
 }
-Vector2.ZERO = new Vector2(0, 0);
+Vector.ZERO = new Vector(0, 0);

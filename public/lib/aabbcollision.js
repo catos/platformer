@@ -1,11 +1,15 @@
-export function AABBCollision(rect1, rect2) {
-    if (rect1.x < rect2.x + rect2.w &&
-        rect1.x + rect1.w > rect2.x &&
-        rect1.y < rect2.y + rect2.h &&
-        rect1.h + rect1.y > rect2.y) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
+"use strict";
+// import { Rectangle } from "./rectangle"
+// // Overlaps ?
+// export function AABBCollision(rect1: Rectangle, rect2: Rectangle) {
+//   if (
+//     rect1.position.x < rect2.position.x + rect2.size.x &&
+//     rect1.position.x + rect1.size.x > rect2.position.x &&
+//     rect1.position.y < rect2.position.y + rect2.size.y &&
+//     rect1.size.y + rect1.position.y > rect2.position.y
+//   ) {
+//     return true
+//   } else {
+//     return false
+//   }
+// }
