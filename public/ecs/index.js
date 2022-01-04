@@ -37,6 +37,7 @@ export class System {
 }
 export class Scene {
     constructor() {
+        this.gravity = 2;
         this.entities = [];
         // TODO: create systems with components to monitor ? need to update systems alot ?
         // new Map<System, Set<Component>>()

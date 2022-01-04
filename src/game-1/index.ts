@@ -1,7 +1,7 @@
-import { Component, Entity, Scene, System } from "./ecs/index.js"
-import { Rectangle } from "./lib/rectangle.js"
-import throwIfNull from "./lib/throw-if-null.js"
-import Vector from "./lib/vector2.js"
+import { Component, Entity, Scene, System } from "../ecs/index.js"
+import { Rectangle } from "../lib/rectangle.js"
+import throwIfNull from "../lib/throw-if-null.js"
+import Vector from "../lib/vector2.js"
 
 /** Canvas */
 
@@ -49,7 +49,12 @@ class Velocity implements Component {
   }
 }
 
-class Movable implements Component {}
+class Input implements Component {
+  left: boolean = false
+  right: boolean = false
+  up: boolean = false
+  down: boolean = false
+}
 
 class BoxCollider implements Component {
   size: Vector
@@ -71,29 +76,6 @@ class Shape implements Component {
 }
 
 /** Systems */
-
-class MovementSystem extends System {
-  public update(dt: number): void {
-    // TODO: BoxCollider is not implicit here...
-    const entities = this.scene.entities.filter((p) =>
-      p.hasAll(new Set<Function>([Position, Velocity, BoxCollider]))
-    )
-
-    entities.forEach((entity) => {
-      const position = entity.get(Position)
-      const { speed, velocity } = entity.get(Velocity)
-      const { collision } = entity.get(BoxCollider)
-
-      if (collision !== Sides.RIGHT && collision !== Sides.LEFT) {
-        position.x += velocity.x * speed * dt
-      }
-
-      if (collision !== Sides.TOP && collision !== Sides.BOTTOM) {
-        position.y += velocity.y * speed * dt
-      }
-    })
-  }
-}
 
 class Renderer extends System {
   public update(dt: number): void {
@@ -143,31 +125,104 @@ class InputSystem extends System {
   // TODO: move logic outside update (it is laggy?), run in event-handler ?
   update() {
     this.scene.entities
-      .filter((p) => p.hasAll(new Set<Function>([Position, Velocity])))
+      .filter((p) => p.hasAll(new Set<Function>([Position, Input])))
       .forEach((entity) => {
-        const { velocity } = entity.get(Velocity)
+        const input = entity.get(Input)
 
         if (this.keysPressed.has("a")) {
-          velocity.x = -1
+          input.left = true
         } else if (this.keysPressed.has("d")) {
-          velocity.x = 1
-        } else {
-          velocity.x = 0
-        }
-
-        if (this.keysPressed.has("w")) {
-          velocity.y = -1
+          input.right = true
+        } else if (this.keysPressed.has("w")) {
+          input.up = true
         } else if (this.keysPressed.has("s")) {
-          velocity.y = 1
+          input.down = true
         } else {
-          velocity.y = 0
+          input.left = false
+          input.right = false
+          input.up = false
+          input.down = false
         }
       })
   }
 }
 
+class MovementSystem extends System {
+  public update(dt: number): void {
+    const entities = this.scene.entities.filter((p) =>
+      p.hasAll(new Set<Function>([Position, Velocity]))
+    )
+
+    entities.forEach((entity) => {
+      const position = entity.get(Position)
+      const { speed, velocity } = entity.get(Velocity)
+
+      if (entity.has(Input)) {
+        const input = entity.get(Input)
+        if (input.left) {
+          velocity.x = -1
+        } else if (input.right) {
+          velocity.x = 1
+        } else if (input.up) {
+          // velocity.y = -1
+        } else {
+          velocity.x = 0
+          velocity.y += (this.scene.gravity * dt)
+        }
+      }
+
+      const newPosition = new Vector(
+        Math.floor(position.x + velocity.x * speed * dt),
+        Math.floor(position.y + velocity.y * speed * dt)
+      )
+
+      if (entity.has(BoxCollider)) {
+        // Check collision
+        const others = this.scene.entities.filter(
+          (p) =>
+            p !== entity && p.hasAll(new Set<Function>([Position, BoxCollider]))
+        )
+    
+        const ep = entity.get(Position)
+        const ec = entity.get(BoxCollider)
+        ec.collision = Sides.NONE
+    
+        const rect1 = new Rectangle(new Vector(ep.x, ep.y), ec.size)
+    
+        others.forEach((other) => {
+          const op = other.get(Position)
+          const oc = other.get(BoxCollider)
+    
+          const rect2 = new Rectangle(new Vector(op.x, op.y), oc.size)
+    
+          if (rect1.intersects(rect2)) {
+            
+            newPosition.x = position.x
+            newPosition.y = position.y
+          }
+        })
+    
+
+        // const { collision } = entity.get(BoxCollider)
+        // if (collision !== Sides.NONE) {
+        //   velocity.x = 0
+        //   velocity.y = 0
+        // }
+      }
+
+      position.x = newPosition.x
+      position.y = newPosition.y
+    })
+  }
+}
+
 class CollisionSystem extends System {
-  checkCollision(entity: Entity, others: Entity[]) {
+  checkCollision(entity: Entity) {
+    const others = this.scene.entities.filter(
+      (p) =>
+        p !== entity && p.hasAll(new Set<Function>([Position, BoxCollider]))
+    )
+
     const ep = entity.get(Position)
     const ec = entity.get(BoxCollider)
     ec.collision = Sides.NONE
@@ -196,11 +251,8 @@ class CollisionSystem extends System {
           // TODO: not sure what to do here
           ec.collision = Sides.RIGHT
         }
-        return true
       }
     })
-
-    return false
   }
 
   update(): void {
@@ -208,20 +260,7 @@ class CollisionSystem extends System {
       p.hasAll(new Set<Function>([BoxCollider, Position]))
     )
 
-    entities.forEach((entity) => {
-      const ec = entity.get(BoxCollider)
-      ec.collision = Sides.NONE
-
-      // Check for collision
-      const others = this.scene.entities.filter(
-        (p) =>
-          p !== entity && p.hasAll(new Set<Function>([Position, BoxCollider]))
-      )
-
-      if (this.checkCollision(entity, others)) {
-        console.log(`collision between ${entity.id} and someone...`)
-      }
-    })
+    entities.forEach((entity) => this.checkCollision(entity))
   }
 }
 
@@ -234,7 +273,7 @@ class DebugInfo extends System {
 
       this.debug.set(
         `#${entity.id} position`,
-        `x=${Math.round(position.x)}, y=${Math.round(position.y)}`
+        `x=${position.x}, y=${position.y}`
       )
 
       const boxCollider = entity.get(BoxCollider)
@@ -247,7 +286,7 @@ class DebugInfo extends System {
         const { velocity } = entity.get(Velocity)
         this.debug.set(
           `#${entity.id} velocity`,
-          `x=${Math.round(velocity.x)}, y=${Math.round(velocity.y)}`
+          `x=${velocity.x}, y=${velocity.y}`
         )
       }
     })
@@ -277,10 +316,12 @@ const player = new Entity(1)
 const width = 32
 const height = 32
 const size = new Vector(width, height)
-player.add(new Position(canvas.width / 2, canvas.height / 2))
+player.add(
+  new Position(Math.round(canvas.width / 2), Math.round(canvas.height / 2))
+)
 player.add(new Velocity())
 player.add(new Shape(width, height, "red"))
-player.add(new Movable())
+player.add(new Input())
 player.add(new BoxCollider(size))
 scene.addEntity(player)
 
@@ -295,20 +336,27 @@ function createThing(id: number, x: number, y: number) {
   thing.add(new Shape(width, height))
   thing.add(new BoxCollider(size))
 
+  // if (id === 5) {
+  //   thing.add(new Velocity(new Vector(-1, 0)))
+  // }
+
   return thing
 }
 
-const center = new Vector(canvas.width / 2, canvas.height / 2)
+const center = new Vector(
+  Math.round(canvas.width / 2),
+  Math.round(canvas.height / 2)
+)
 
 scene.addEntity(createThing(2, center.x - 128, center.y))
 scene.addEntity(createThing(3, center.x - 160, center.y - 32))
 scene.addEntity(createThing(4, center.x + 128, center.y))
-scene.addEntity(createThing(4, center.x, center.y + 128))
+scene.addEntity(createThing(5, center.x, center.y + 128))
 
 scene.addSystem(new InputSystem(scene))
 scene.addSystem(new MovementSystem(scene))
 scene.addSystem(new Renderer(scene))
-scene.addSystem(new CollisionSystem(scene))
+// scene.addSystem(new CollisionSystem(scene))
 scene.addSystem(new DebugInfo(scene))
 
 /** Tests */

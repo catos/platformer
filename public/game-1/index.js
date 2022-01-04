@@ -1,7 +1,7 @@
-import { Entity, Scene, System } from "./ecs/index.js";
-import { Rectangle } from "./lib/rectangle.js";
-import throwIfNull from "./lib/throw-if-null.js";
-import Vector from "./lib/vector2.js";
+import { Entity, Scene, System } from "../ecs/index.js";
+import { Rectangle } from "../lib/rectangle.js";
+import throwIfNull from "../lib/throw-if-null.js";
+import Vector from "../lib/vector2.js";
 /** Canvas */
 const canvas = throwIfNull(document.body.querySelector("#canvas1"), "Canvas could not be found");
 canvas.width = document.body.scrollWidth;
