@@ -13,6 +13,7 @@
 
 ### Collision
 - Rectangle collision: https://www.youtube.com/watch?v=LYrge3ylccQ&ab_channel=PothOnProgramming
+- Collision detection: https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
 
 ## PHYSICS & COLLISION
 - https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
