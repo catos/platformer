@@ -23,7 +23,7 @@ class Position {
     }
 }
 class Velocity {
-    constructor(velocity = Vector.ZERO, speed = 40) {
+    constructor(velocity = Vector.ZERO, speed = 60) {
         this.velocity = velocity;
         this.speed = speed;
     }
@@ -73,38 +73,22 @@ class Renderer extends System {
 class InputSystem extends System {
     constructor(scene) {
         super(scene);
-        this.keysPressed = new Set();
-        document.addEventListener("keydown", (e) => {
-            this.keysPressed.add(e.key);
-        });
-        document.addEventListener("keyup", (e) => {
-            this.keysPressed.delete(e.key);
-        });
+        this.keyState = {};
+        const keyHandler = (e) => {
+            this.keyState[e.key] = e.type === "keydown";
+        };
+        document.addEventListener("keydown", keyHandler);
+        document.addEventListener("keyup", keyHandler);
     }
-    // TODO: move logic outside update (it is laggy?), run in event-handler ?
     update() {
         this.scene.entities
             .filter((p) => p.hasAll(new Set([Position, Input])))
             .forEach((entity) => {
             const input = entity.get(Input);
-            if (this.keysPressed.has("a")) {
-                input.left = true;
-            }
-            else if (this.keysPressed.has("d")) {
-                input.right = true;
-            }
-            else if (this.keysPressed.has("w")) {
-                input.up = true;
-            }
-            else if (this.keysPressed.has("s")) {
-                input.down = true;
-            }
-            else {
-                input.left = false;
-                input.right = false;
-                input.up = false;
-                input.down = false;
-            }
+            input.left = Boolean(this.keyState["a"]);
+            input.right = Boolean(this.keyState["d"]);
+            input.up = Boolean(this.keyState["w"]);
+            input.down = Boolean(this.keyState["s"]);
         });
     }
 }
@@ -228,10 +212,10 @@ class DebugInfo extends System {
         context.fillText(`position: x=${position.x}, y=${position.y}`, 10, 20);
         const boxCollider = player.get(BoxCollider);
         context.fillText(`collision: ${boxCollider.collision.toString()}`, 10, 40);
-        if (player.has(Velocity)) {
-            const { velocity } = player.get(Velocity);
-            context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 60);
-        }
+        const { velocity } = player.get(Velocity);
+        context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 60);
+        const input = player.get(Input);
+        context.fillText(`input: left=${input.left.toString()}, right=${input.right.toString()}, up=${input.up.toString()}, down=${input.down.toString()},`, 10, 80);
     }
 }
 /** Game */
@@ -263,8 +247,6 @@ scene.addEntity(createBox(new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)));
 scene.addEntity(createBox(new Vector(64 * 12, 64 * 5), new Vector(64, 64)));
 scene.addEntity(createBox(new Vector(64 * 2, 64 * 5), new Vector(64, 64)));
 /** Tests */
-const entities = scene.entities.filter((p) => p.hasAll(new Set([Position, Velocity])));
-console.log(entities);
 /** Game loop */
 let lastTime = 0;
 function loop(time) {

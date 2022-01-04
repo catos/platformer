@@ -11,6 +11,9 @@
 - https://blog.mozvr.com/introducing-ecsy/
 - https://medium.com/ingeniouslysimple/entities-components-and-systems-89c31464240d
 
+### Collision
+- Rectangle collision: https://www.youtube.com/watch?v=LYrge3ylccQ&ab_channel=PothOnProgramming
+
 ## PHYSICS & COLLISION
 - https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
 
