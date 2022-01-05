@@ -1,7 +1,7 @@
 import { Component, Entity, Scene, System } from "../ecs/index.js"
-import { Rectangle } from "../lib/rectangle.js"
-import throwIfNull from "../lib/throw-if-null.js"
-import Vector from "../lib/vector2.js"
+import { Rectangle, Sides } from "../ecs/lib/rectangle.js"
+import throwIfNull from "../ecs/lib/throw-if-null.js"
+import Vector from "../ecs/lib/vector2.js"
 
 /** Canvas */
 
@@ -17,16 +17,6 @@ const context = throwIfNull(
   canvas.getContext("2d"),
   "Canvas context is missing!"
 )
-
-/** TODO: move */
-
-export enum Sides {
-  NONE = 0,
-  TOP = 1,
-  BOTTOM = 2,
-  LEFT = 3,
-  RIGHT = 4,
-}
 
 /** Components */
 
