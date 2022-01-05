@@ -10,8 +10,9 @@ export class Entity {
     this.id = id
   }
 
-  public add(component: Component): void {
+  public add(component: Component): Entity {
     this.components.set(component.constructor, component)
+    return this
   }
 
   public get<T extends Component>(componentClass: ComponentClass<T>): T {
@@ -67,9 +68,10 @@ export class Scene {
   // }
 
   // TODO: validate system, needs componentsRequired and more ?
-  public addSystem(system: System): void {
+  public addSystem(system: System): Scene {
     system.scene = this
     this.systems.push(system)
+    return this
   }
 
   public init(): void {
