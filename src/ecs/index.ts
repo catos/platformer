@@ -42,7 +42,8 @@ export class Entity {
 }
 
 export abstract class System {
-  constructor(protected scene: Scene) {}
+  public scene!: Scene
+  init(): void {}
   abstract update(dt: number): void
 }
 
@@ -54,17 +55,31 @@ export class Scene {
   // new Map<System, Set<Component>>()
   private systems: System[] = []
 
-  // TODO: add validation ?
-  public addEntity(entity: Entity) {
+  public addEntity(entity: Entity): Scene {
     this.entities.push(entity)
+    return this
   }
+
+  // TODO: https://maxwellforbes.com/posts/typescript-ecs-implementation
+  // public removeEntity(entity: Entity): Scene {
+  //   this.entities.push(entity)
+  //   return this
+  // }
 
   // TODO: validate system, needs componentsRequired and more ?
   public addSystem(system: System): void {
+    system.scene = this
     this.systems.push(system)
+  }
+
+  public init(): void {
+    this.systems.forEach((system) => system.init())
   }
 
   public update(dt: number): void {
     this.systems.forEach((system) => system.update(dt))
+
+    // TODO: https://maxwellforbes.com/posts/typescript-ecs-implementation
+    // this.entitiesToDestroy.forEach(entity => )
   }
 }

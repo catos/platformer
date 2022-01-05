@@ -68,7 +68,7 @@ class Shape implements Component {
 
 /** Systems */
 
-class Renderer extends System {
+class ShapeRenderer extends System {
   public update(dt: number): void {
     context.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -96,9 +96,7 @@ class Renderer extends System {
 class InputSystem extends System {
   private keyState: { [key: string]: boolean } = {}
 
-  constructor(scene: Scene) {
-    super(scene)
-
+  init() {
     const keyHandler = (e: KeyboardEvent) => {
       this.keyState[e.key] = e.type === "keydown"
     }
@@ -109,7 +107,7 @@ class InputSystem extends System {
 
   update() {
     this.scene.entities
-      .filter((p) => p.hasAll(new Set<Function>([Position, Input])))
+      .filter((p) => p.has(Input))
       .forEach((entity) => {
         const input = entity.get(Input)
         input.left = Boolean(this.keyState["a"])
@@ -280,11 +278,11 @@ class DebugInfo extends System {
 /** Scene */
 
 const scene = new Scene()
-scene.addSystem(new InputSystem(scene))
-scene.addSystem(new MovementSystem(scene))
-scene.addSystem(new CollisionSystem(scene))
-scene.addSystem(new Renderer(scene))
-scene.addSystem(new DebugInfo(scene))
+scene.addSystem(new InputSystem())
+scene.addSystem(new MovementSystem())
+scene.addSystem(new CollisionSystem())
+scene.addSystem(new ShapeRenderer())
+scene.addSystem(new DebugInfo())
 
 const player = new Entity(1)
 const size = new Vector(32, 32)
@@ -307,10 +305,13 @@ function createBox(position: Vector, size: Vector) {
   return thing
 }
 
-scene.addEntity(createBox(new Vector(64, 64 * 6), new Vector(64 * 14, 64)))
-scene.addEntity(createBox(new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)))
-scene.addEntity(createBox(new Vector(64 * 12, 64 * 5), new Vector(64, 64)))
-scene.addEntity(createBox(new Vector(64 * 2, 64 * 5), new Vector(64, 64)))
+scene
+  .addEntity(createBox(new Vector(64, 64 * 6), new Vector(64 * 14, 64)))
+  .addEntity(createBox(new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)))
+  .addEntity(createBox(new Vector(64 * 12, 64 * 5), new Vector(64, 64)))
+  .addEntity(createBox(new Vector(64 * 2, 64 * 5), new Vector(64, 64)))
+
+scene.init()
 
 /** Tests */
 
