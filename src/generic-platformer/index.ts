@@ -2,6 +2,7 @@ import { Component, Entity, Scene, System } from "../ecs/index.js"
 import { Rectangle, Sides } from "../ecs/lib/rectangle.js"
 import throwIfNull from "../ecs/lib/throw-if-null.js"
 import Vector from "../ecs/lib/vector2.js"
+import Timer from "../ecs/timer.js"
 
 /** Canvas */
 
@@ -276,7 +277,7 @@ class DebugInfo extends System {
   }
 }
 
-/** Game */
+/** Scene */
 
 const scene = new Scene()
 scene.addSystem(new InputSystem(scene))
@@ -315,14 +316,8 @@ scene.addEntity(createBox(new Vector(64 * 2, 64 * 5), new Vector(64, 64)))
 
 /** Game loop */
 
-let lastTime = 0
-function loop(time: number) {
-  const dt = (time - lastTime) / 1000
-  lastTime = time
-
+const timer = new Timer((dt: number) => {
   scene.update(dt)
+})
 
-  requestAnimationFrame(loop)
-}
-
-loop(0)
+timer.start()
