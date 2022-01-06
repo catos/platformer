@@ -1,5 +1,6 @@
 import { Context } from "../ecs/context.js"
 import { Component, Entity, Scene, System } from "../ecs/index.js"
+import { clamp } from "../ecs/lib/clamp.js"
 import { Rectangle, Sides } from "../ecs/lib/rectangle.js"
 import Vector from "../ecs/lib/vector2.js"
 import Timer from "../ecs/timer.js"
@@ -23,7 +24,7 @@ class Velocity implements Component {
   speed: number
   velocity: Vector
 
-  constructor(velocity: Vector = Vector.ZERO, speed: number = 60) {
+  constructor(velocity: Vector = Vector.ZERO, speed: number = 50) {
     this.velocity = velocity
     this.speed = speed
   }
@@ -126,11 +127,11 @@ class MovementSystem extends System {
           const input = entity.get(Input)
 
           if (input.left) {
-            velocity.x = -5
+            velocity.x -= speed
           }
 
           if (input.right) {
-            velocity.x = 5
+            velocity.x += speed
           }
 
           if (input.up) {
@@ -140,23 +141,25 @@ class MovementSystem extends System {
 
         velocity.y += this.scene.gravity
 
-        position.x += velocity.x * speed * dt
-        position.y += velocity.y * dt
-
+        // Drag
         velocity.x *= 0.85
 
-        // TODO: clamp velocities
+        // Clamp
+        velocity.x = clamp(velocity.x, -750, 750)
+        velocity.y = clamp(velocity.y, -750, 750)
 
         // Round x to zero
         if (velocity.x < 0.2 && velocity.x > -0.2) {
           velocity.x = 0
         }
+
+        position.x += velocity.x * dt
+        position.y += velocity.y * dt
       })
   }
 }
 
-class CollisionSystem extends System {
-  // TODO: refactor code below
+class PhysicsSystem extends System {
   checkCollision(entity: Entity) {
     if (entity.has(BoxCollider)) {
       const entityTransform = entity.get(Transform)
@@ -223,19 +226,20 @@ class DebugInfo extends System {
     context.fillStyle = "#000000"
     context.textAlign = "left"
     context.textBaseline = "top"
-    context.fillText(`position: x=${position.x}, y=${position.y}`, 10, 20)
+    context.fillText(`position: x=${position.x}, y=${position.y}`, 20, 20)
 
-    const { velocity } = player.get(Velocity)
-    context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 40)
+    const { velocity, speed } = player.get(Velocity)
+    context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 20, 40)
+    context.fillText(`speed: ${speed}`, 20, 60)
 
-    this.scene.entities.forEach((entity, i) => {
-      const { collision } = entity.get(BoxCollider)
-      context.fillText(
-        `#${entity.id} collision: ${collision.toString()}`,
-        10,
-        60 + i * 20
-      )
-    })
+    // this.scene.entities.forEach((entity, i) => {
+    //   const { collision } = entity.get(BoxCollider)
+    //   context.fillText(
+    //     `#${entity.id} collision: ${collision.toString()}`,
+    //     20,
+    //     80 + i * 20
+    //   )
+    // })
 
     this.scene.entities
       .filter((p) => p.hasAll(new Set<Function>([Transform, Shape])))
@@ -259,15 +263,14 @@ const scene = new Scene()
 scene
   .addSystem(new InputSystem())
   .addSystem(new MovementSystem())
-  .addSystem(new CollisionSystem())
+  .addSystem(new PhysicsSystem())
   .addSystem(new ShapeRenderer())
   .addSystem(new CollisionRenderer())
   .addSystem(new DebugInfo())
 
 const player = new Entity(1)
-const position = new Vector(600, 100)
 player
-  .add(new Transform(position, new Vector(32, 32)))
+  .add(new Transform(new Vector(64*10, 64*9), new Vector(32, 32)))
   .add(new Velocity())
   .add(new Shape("blue"))
   .add(new Input())
@@ -285,10 +288,10 @@ function createBox(id: number, position: Vector, size: Vector) {
 }
 
 scene
-  .addEntity(createBox(2, new Vector(64, 64 * 6), new Vector(64 * 14, 64)))
-  .addEntity(createBox(3, new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)))
-  .addEntity(createBox(4, new Vector(64 * 12, 64 * 5), new Vector(64, 64)))
-  .addEntity(createBox(5, new Vector(64 * 2, 64 * 5), new Vector(64, 64)))
+.addEntity(createBox(3, new Vector(64 * 5, 64 * 7), new Vector(64 * 4, 64)))
+.addEntity(createBox(4, new Vector(64 * 12, 64 * 9), new Vector(64, 64)))
+.addEntity(createBox(5, new Vector(64 * 2, 64 * 9), new Vector(64, 64)))
+.addEntity(createBox(2, new Vector(64, 64 * 10), new Vector(64 * 14, 64)))
 
 scene.init()
 

@@ -57,9 +57,13 @@ How To Make A JavaScript Platformer
 
 # TODO
 
-- Finish debugsystem, where to put code ? scene ? game ? ...systems ?
+- Fix: velocity, speed, drag, gravity, no-fly, double-jump
 - NPC & collision
+- Finish debugsystem, where to put code ? scene ? game ? ...systems ?
 - Coin & collision with different response
-- Projectile weapon
 - Design a level
+- Projectile weapon
+- Crouch
+- Dash
 - Camera
+- UI

@@ -49,7 +49,7 @@ export abstract class System {
 }
 
 export class Scene {
-  gravity = 20
+  gravity = 40
   entities: Entity[] = []
 
   // TODO: create systems with components to monitor ? need to update systems alot ?
