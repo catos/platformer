@@ -9,11 +9,13 @@ const { canvas, context } = new Context()
 
 /** Components */
 
-class Position implements Component {
+class Transform implements Component {
   position: Vector
+  size: Vector
 
-  constructor(position: Vector = Vector.ZERO) {
+  constructor(position: Vector = Vector.ZERO, size: Vector) {
     this.position = position
+    this.size = size
   }
 }
 
@@ -36,20 +38,19 @@ class Input implements Component {
 
 class BoxCollider implements Component {
   size: Vector
-  // TODO: offset: Vector
+  offset: Vector
   collision: Sides
 
   constructor(size: Vector) {
+    this.offset = new Vector(4, 4)
     this.size = size
     this.collision = Sides.NONE
   }
 }
 
 class Shape implements Component {
-  size: Vector
   color: string
-  constructor(size: Vector, color: string = "gray") {
-    this.size = size
+  constructor(color: string = "gray") {
     this.color = color
   }
 }
@@ -62,22 +63,28 @@ class ShapeRenderer extends System {
 
     this.scene.entities
       // TODO: simplify filter ? p.hasAll([Position, Shape])
-      .filter((p) => p.hasAll(new Set<Function>([Position, Shape])))
+      .filter((p) => p.hasAll(new Set<Function>([Transform, Shape])))
       .forEach((entity) => {
-        const { position } = entity.get(Position)
-        const shape = entity.get(Shape)
-
-        let color = shape.color
-        if (entity.has(BoxCollider)) {
-          const { collision } = entity.get(BoxCollider)
-          if (collision !== Sides.NONE) {
-            color = "purple"
-          }
-          // console.log(`entity ${entity.id}, color: ${color}`);
-        }
+        const { position, size } = entity.get(Transform)
+        const { color } = entity.get(Shape)
 
         context.fillStyle = color
-        context.fillRect(position.x, position.y, shape.size.x, shape.size.y)
+        context.fillRect(position.x, position.y, size.x, size.y)
+      })
+  }
+}
+
+class CollisionRenderer extends System {
+  public update(dt: number): void {
+    this.scene.entities
+      .filter((p) => p.hasAll(new Set<Function>([Transform, BoxCollider])))
+      .forEach((entity) => {
+        const { position } = entity.get(Transform)
+        const { collision, size } = entity.get(BoxCollider)
+        if (collision !== Sides.NONE) {
+          context.fillStyle = "rgba(255, 0, 0, 0.7)"
+          context.fillRect(position.x, position.y, size.x, size.y)
+        }
       })
   }
 }
@@ -110,9 +117,9 @@ class InputSystem extends System {
 class MovementSystem extends System {
   public update(dt: number): void {
     this.scene.entities
-      .filter((p) => p.hasAll(new Set<Function>([Position, Velocity])))
+      .filter((p) => p.hasAll(new Set<Function>([Transform, Velocity])))
       .forEach((entity) => {
-        const { position } = entity.get(Position)
+        const { position } = entity.get(Transform)
         const { speed, velocity } = entity.get(Velocity)
 
         if (entity.has(Input)) {
@@ -136,7 +143,7 @@ class MovementSystem extends System {
         position.x += velocity.x * speed * dt
         position.y += velocity.y * dt
 
-        velocity.x *= 0.8
+        velocity.x *= 0.85
 
         // TODO: clamp velocities
 
@@ -152,40 +159,40 @@ class CollisionSystem extends System {
   // TODO: refactor code below
   checkCollision(entity: Entity) {
     if (entity.has(BoxCollider)) {
-      const { position: ep } = entity.get(Position)
-      const ec = entity.get(BoxCollider)
-      const entityRectangle = new Rectangle(ep, ec.size)
+      const entityTransform = entity.get(Transform)
+      const entityCollider = entity.get(BoxCollider)
+      const entityRectangle = new Rectangle(entityTransform.position, entityCollider.size)
 
       const others = this.scene.entities.filter(
         (p) =>
-          p !== entity && p.hasAll(new Set<Function>([Position, BoxCollider]))
+          p !== entity && p.hasAll(new Set<Function>([Transform, BoxCollider]))
       )
       others.forEach((other) => {
-        const { position: op } = other.get(Position)
-        const oc = other.get(BoxCollider)
-        const otherRectangle = new Rectangle(op, oc.size)
+        const otherTransform = other.get(Transform)
+        const otherCollider = other.get(BoxCollider)
+        const otherRectangle = new Rectangle(otherTransform.position, otherCollider.size)
 
-        oc.collision = Sides.NONE
+        otherCollider.collision = Sides.NONE
         const side = otherRectangle.collidesWith(entityRectangle)
         if (side !== Sides.NONE) {
-          ec.collision = side
+          entityCollider.collision = side
 
           const { velocity } = entity.get(Velocity)
           if (side === Sides.LEFT) {
-            oc.collision = Sides.RIGHT
-            ep.x = op.x + oc.size.x
+            otherCollider.collision = Sides.RIGHT
+            entityTransform.position.x = otherTransform.position.x + otherCollider.size.x
             velocity.x = 0
           } else if (side === Sides.RIGHT) {
-            oc.collision = Sides.LEFT
-            ep.x = op.x - ec.size.x
+            otherCollider.collision = Sides.LEFT
+            entityTransform.position.x = otherTransform.position.x - entityCollider.size.x
             velocity.x = 0
           } else if (side === Sides.TOP) {
-            oc.collision = Sides.BOTTOM
-            ep.y = op.y + oc.size.y
+            otherCollider.collision = Sides.BOTTOM
+            entityTransform.position.y = otherTransform.position.y + otherCollider.size.y
             velocity.y = 0
           } else if (side === Sides.BOTTOM) {
-            oc.collision = Sides.TOP
-            ep.y = op.y - ec.size.y
+            otherCollider.collision = Sides.TOP
+            entityTransform.position.y = otherTransform.position.y - entityCollider.size.y
             velocity.y = 0
           }
         }
@@ -195,7 +202,7 @@ class CollisionSystem extends System {
 
   update(): void {
     const entities = this.scene.entities.filter((p) =>
-      p.hasAll(new Set<Function>([BoxCollider, Position, Velocity]))
+      p.hasAll(new Set<Function>([BoxCollider, Transform, Velocity]))
     )
 
     entities.forEach((entity) => this.checkCollision(entity))
@@ -210,7 +217,7 @@ class DebugInfo extends System {
     const player = this.scene.entities.find((p) => p.id === 1)
     if (!player) return
 
-    const { position } = player.get(Position)
+    const { position } = player.get(Transform)
 
     context.font = "14px monospace"
     context.fillStyle = "#000000"
@@ -218,24 +225,22 @@ class DebugInfo extends System {
     context.textBaseline = "top"
     context.fillText(`position: x=${position.x}, y=${position.y}`, 10, 20)
 
-    const boxCollider = player.get(BoxCollider)
-    context.fillText(`collision: ${boxCollider.collision.toString()}`, 10, 40)
-
     const { velocity } = player.get(Velocity)
-    context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 60)
+    context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 40)
 
-    const nonPlayers = this.scene.entities
-      .filter((p) => p.id !== 1)
-      .forEach((entity, i) => {
-        const { collision } = entity.get(BoxCollider)
-        context.fillText(`collision: ${collision.toString()}`, 10, 80 + i * 20)
-      })
+    this.scene.entities.forEach((entity, i) => {
+      const { collision } = entity.get(BoxCollider)
+      context.fillText(
+        `#${entity.id} collision: ${collision.toString()}`,
+        10,
+        60 + i * 20
+      )
+    })
 
     this.scene.entities
-      .filter((p) => p.hasAll(new Set<Function>([Position, Shape])))
+      .filter((p) => p.hasAll(new Set<Function>([Transform, Shape])))
       .forEach((entity) => {
-        const { position } = entity.get(Position)
-        const { size } = entity.get(Shape)
+        const { position, size } = entity.get(Transform)
 
         context.font = "14px monospace"
         context.textAlign = "center"
@@ -256,33 +261,30 @@ scene
   .addSystem(new MovementSystem())
   .addSystem(new CollisionSystem())
   .addSystem(new ShapeRenderer())
+  .addSystem(new CollisionRenderer())
   .addSystem(new DebugInfo())
 
 const player = new Entity(1)
-const size = new Vector(32, 32)
+const position = new Vector(600, 100)
 player
-  .add(new Position(new Vector(600, 100)))
+  .add(new Transform(position, new Vector(32, 32)))
   .add(new Velocity())
-  .add(new Shape(size, "blue"))
+  .add(new Shape("blue"))
   .add(new Input())
-  .add(new BoxCollider(size))
+  .add(new BoxCollider(new Vector(24, 24)))
 scene.addEntity(player)
 
 function createBox(id: number, position: Vector, size: Vector) {
   const thing = new Entity(id)
 
-  thing.add(new Position(position))
-  thing.add(new Shape(size, "green"))
+  thing.add(new Transform(position, size))
+  thing.add(new Shape("green"))
   thing.add(new BoxCollider(size))
 
   return thing
 }
 
 scene
-  // .addEntity(createBox(2, new Vector(64, 64 * 6), new Vector(64 * 7, 64)))
-  // .addEntity(
-  //   createBox(3, new Vector(64 * 8, 64 * 6 - 32), new Vector(64 * 7, 64))
-  // )
   .addEntity(createBox(2, new Vector(64, 64 * 6), new Vector(64 * 14, 64)))
   .addEntity(createBox(3, new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)))
   .addEntity(createBox(4, new Vector(64 * 12, 64 * 5), new Vector(64, 64)))
