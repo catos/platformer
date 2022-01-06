@@ -37,11 +37,11 @@ class Input implements Component {
 class BoxCollider implements Component {
   size: Vector
   // TODO: offset: Vector
-  collision: boolean
+  collision: Sides
 
   constructor(size: Vector) {
     this.size = size
-    this.collision = false
+    this.collision = Sides.NONE
   }
 }
 
@@ -67,12 +67,13 @@ class ShapeRenderer extends System {
         const { position } = entity.get(Position)
         const shape = entity.get(Shape)
 
-        let color = "gray" // shape.color
+        let color = shape.color
         if (entity.has(BoxCollider)) {
-          const collider = entity.get(BoxCollider)
-          if (collider.collision) {
+          const { collision } = entity.get(BoxCollider)
+          if (collision !== Sides.NONE) {
             color = "purple"
           }
+          // console.log(`entity ${entity.id}, color: ${color}`);
         }
 
         context.fillStyle = color
@@ -137,6 +138,8 @@ class MovementSystem extends System {
 
         velocity.x *= 0.8
 
+        // TODO: clamp velocities
+
         // Round x to zero
         if (velocity.x < 0.2 && velocity.x > -0.2) {
           velocity.x = 0
@@ -149,45 +152,42 @@ class CollisionSystem extends System {
   // TODO: refactor code below
   checkCollision(entity: Entity) {
     if (entity.has(BoxCollider)) {
+      const { position: ep } = entity.get(Position)
+      const ec = entity.get(BoxCollider)
+      const entityRectangle = new Rectangle(ep, ec.size)
+
       const others = this.scene.entities.filter(
         (p) =>
           p !== entity && p.hasAll(new Set<Function>([Position, BoxCollider]))
       )
-
-      const { position: ep } = entity.get(Position)
-      const ec = entity.get(BoxCollider)
-      // ec.collision = false
-
-      const entityRectangle = new Rectangle(ep, ec.size)
-
       others.forEach((other) => {
         const { position: op } = other.get(Position)
         const oc = other.get(BoxCollider)
-        // oc.collision = false
-
         const otherRectangle = new Rectangle(op, oc.size)
+
+        oc.collision = Sides.NONE
         const side = otherRectangle.collidesWith(entityRectangle)
         if (side !== Sides.NONE) {
-          ec.collision = true
-          // oc.collision = true
+          ec.collision = side
 
-          if (entity.has(Velocity)) {
-            const { velocity } = entity.get(Velocity)
-            if (side === Sides.LEFT) {
-              ep.x = op.x + oc.size.x
-            } else if (side === Sides.RIGHT) {
-              ep.x = op.x - ec.size.x
-            } else if (side === Sides.TOP) {
-              ep.y = op.y + oc.size.y
-              velocity.y = 0
-            } else if (side === Sides.BOTTOM) {
-              ep.y = op.y - ec.size.y
-              velocity.y = 0
-            }
+          const { velocity } = entity.get(Velocity)
+          if (side === Sides.LEFT) {
+            oc.collision = Sides.RIGHT
+            ep.x = op.x + oc.size.x
+            velocity.x = 0
+          } else if (side === Sides.RIGHT) {
+            oc.collision = Sides.LEFT
+            ep.x = op.x - ec.size.x
+            velocity.x = 0
+          } else if (side === Sides.TOP) {
+            oc.collision = Sides.BOTTOM
+            ep.y = op.y + oc.size.y
+            velocity.y = 0
+          } else if (side === Sides.BOTTOM) {
+            oc.collision = Sides.TOP
+            ep.y = op.y - ec.size.y
+            velocity.y = 0
           }
-        } else {
-          ec.collision = false
-          // oc.collision = false
         }
       })
     }
@@ -195,7 +195,7 @@ class CollisionSystem extends System {
 
   update(): void {
     const entities = this.scene.entities.filter((p) =>
-      p.hasAll(new Set<Function>([BoxCollider, Position]))
+      p.hasAll(new Set<Function>([BoxCollider, Position, Velocity]))
     )
 
     entities.forEach((entity) => this.checkCollision(entity))
@@ -207,13 +207,15 @@ class DebugInfo extends System {
   debug: string[] = []
 
   update(dt: number) {
-    const player = scene.entities.find((p) => p.id === 1)
+    const player = this.scene.entities.find((p) => p.id === 1)
     if (!player) return
 
     const { position } = player.get(Position)
 
-    context.fillStyle = "#000000"
     context.font = "14px monospace"
+    context.fillStyle = "#000000"
+    context.textAlign = "left"
+    context.textBaseline = "top"
     context.fillText(`position: x=${position.x}, y=${position.y}`, 10, 20)
 
     const boxCollider = player.get(BoxCollider)
@@ -221,6 +223,13 @@ class DebugInfo extends System {
 
     const { velocity } = player.get(Velocity)
     context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 10, 60)
+
+    const nonPlayers = this.scene.entities
+      .filter((p) => p.id !== 1)
+      .forEach((entity, i) => {
+        const { collision } = entity.get(BoxCollider)
+        context.fillText(`collision: ${collision.toString()}`, 10, 80 + i * 20)
+      })
 
     this.scene.entities
       .filter((p) => p.hasAll(new Set<Function>([Position, Shape])))
@@ -232,8 +241,8 @@ class DebugInfo extends System {
         context.textAlign = "center"
         context.textBaseline = "middle"
         context.fillStyle = "white"
-        const x = position.x + (size.x / 2)
-        const y = position.y + (size.y / 2)
+        const x = position.x + size.x / 2
+        const y = position.y + size.y / 2
         context.fillText(`${entity.id}`, x, y)
       })
   }
@@ -270,6 +279,10 @@ function createBox(id: number, position: Vector, size: Vector) {
 }
 
 scene
+  // .addEntity(createBox(2, new Vector(64, 64 * 6), new Vector(64 * 7, 64)))
+  // .addEntity(
+  //   createBox(3, new Vector(64 * 8, 64 * 6 - 32), new Vector(64 * 7, 64))
+  // )
   .addEntity(createBox(2, new Vector(64, 64 * 6), new Vector(64 * 14, 64)))
   .addEntity(createBox(3, new Vector(64 * 5, 64 * 3), new Vector(64 * 4, 64)))
   .addEntity(createBox(4, new Vector(64 * 12, 64 * 5), new Vector(64, 64)))

@@ -57,8 +57,8 @@ How To Make A JavaScript Platformer
 
 # TODO
 
+- Center entity-id text & fix collision system
 - Finish debugsystem, where to put code ? scene ? game ? ...systems ?
-- Fix collision system
 - NPC & collision
 - Coin & collision with different response
 - Projectile weapon

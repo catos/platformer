@@ -24,19 +24,19 @@ export class Rectangle {
     return this.position.y + this.size.y * 0.5
   }
 
-  intersects({ position, size }: Rectangle) {
-    if (this.position.x >= position.x + size.x) {
-      return false
-    } else if (this.position.x + this.size.x <= position.x) {
-      return false
-    } else if (this.position.y >= position.y + size.y) {
-      return false
-    } else if (this.position.y + this.size.y <= position.y) {
-      return false
-    } else {
-      return true
-    }
-  }
+  // intersects({ position, size }: Rectangle) {
+  //   if (this.position.x >= position.x + size.x) {
+  //     return false
+  //   } else if (this.position.x + this.size.x <= position.x) {
+  //     return false
+  //   } else if (this.position.y >= position.y + size.y) {
+  //     return false
+  //   } else if (this.position.y + this.size.y <= position.y) {
+  //     return false
+  //   } else {
+  //     return true
+  //   }
+  // }
 
   collidesWith(rect: Rectangle) {
     var dx = rect.cx - this.cx // x difference between centers
