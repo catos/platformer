@@ -56,6 +56,31 @@ class Shape implements Component {
   }
 }
 
+class Jump implements Component {
+  // jumpPressedTimer: number
+  onGroundTimer: number
+  canJump: boolean
+  count: number
+  maxCount: number
+  // duration: number
+  velocity: number
+  // engagedTime: number
+  // speedBoost: number // velocity.x can improve jump!
+
+  constructor() {
+    // this.jumpPressedTimer = 0
+    this.onGroundTimer = 0
+    this.canJump = false
+    this.count = 0
+    this.maxCount = 2
+
+    // this.duration = 0.3
+    this.velocity = 600
+    // this.engagedTime = 0
+    // this.speedBoost = 0.3
+  }
+}
+
 /** Systems */
 
 class ShapeRenderer extends System {
@@ -83,7 +108,7 @@ class CollisionRenderer extends System {
         const { position } = entity.get(Transform)
         const { collision, size } = entity.get(BoxCollider)
         if (collision !== Sides.NONE) {
-          context.fillStyle = "rgba(255, 0, 0, 0.7)"
+          context.fillStyle = "rgba(0, 0, 0, 0.5)"
           context.fillRect(position.x, position.y, size.x, size.y)
         }
       })
@@ -133,10 +158,6 @@ class MovementSystem extends System {
           if (input.right) {
             velocity.x += speed
           }
-
-          if (input.up) {
-            velocity.y = -500
-          }
         }
 
         velocity.y += this.scene.gravity
@@ -159,12 +180,45 @@ class MovementSystem extends System {
   }
 }
 
+class JumpSystem extends System {
+  update(dt: number): void {
+    this.scene.entities
+      .filter((p) => p.hasAll(new Set<Function>([Velocity, Jump])))
+      .forEach((entity) => {
+        const { velocity } = entity.get(Velocity)
+        const { collision } = entity.get(BoxCollider)
+        const jump = entity.get(Jump)
+
+        if (collision === Sides.BOTTOM) {
+          jump.count = 0
+          jump.onGroundTimer = 0.1
+        } else {
+          jump.onGroundTimer -= dt
+        }
+
+        jump.canJump = jump.onGroundTimer > 0 || jump.count < jump.maxCount// TODO: later ... maybe || isClimbing
+
+        if (entity.has(Input)) {
+          const input = entity.get(Input)
+          if (input.up && jump.canJump) {
+            jump.count++
+            velocity.y = -jump.velocity
+          }
+        }
+      })
+  }
+}
+
 class PhysicsSystem extends System {
   checkCollision(entity: Entity) {
     if (entity.has(BoxCollider)) {
       const entityTransform = entity.get(Transform)
       const entityCollider = entity.get(BoxCollider)
-      const entityRectangle = new Rectangle(entityTransform.position, entityCollider.size)
+      const entityRectangle = new Rectangle(
+        entityTransform.position,
+        entityCollider.size
+      )
+      entityCollider.collision = Sides.NONE
 
       const others = this.scene.entities.filter(
         (p) =>
@@ -173,7 +227,10 @@ class PhysicsSystem extends System {
       others.forEach((other) => {
         const otherTransform = other.get(Transform)
         const otherCollider = other.get(BoxCollider)
-        const otherRectangle = new Rectangle(otherTransform.position, otherCollider.size)
+        const otherRectangle = new Rectangle(
+          otherTransform.position,
+          otherCollider.size
+        )
 
         otherCollider.collision = Sides.NONE
         const side = otherRectangle.collidesWith(entityRectangle)
@@ -183,19 +240,23 @@ class PhysicsSystem extends System {
           const { velocity } = entity.get(Velocity)
           if (side === Sides.LEFT) {
             otherCollider.collision = Sides.RIGHT
-            entityTransform.position.x = otherTransform.position.x + otherCollider.size.x
+            entityTransform.position.x =
+              otherTransform.position.x + otherCollider.size.x
             velocity.x = 0
           } else if (side === Sides.RIGHT) {
             otherCollider.collision = Sides.LEFT
-            entityTransform.position.x = otherTransform.position.x - entityCollider.size.x
+            entityTransform.position.x =
+              otherTransform.position.x - entityCollider.size.x
             velocity.x = 0
           } else if (side === Sides.TOP) {
             otherCollider.collision = Sides.BOTTOM
-            entityTransform.position.y = otherTransform.position.y + otherCollider.size.y
+            entityTransform.position.y =
+              otherTransform.position.y + otherCollider.size.y
             velocity.y = 0
           } else if (side === Sides.BOTTOM) {
             otherCollider.collision = Sides.TOP
-            entityTransform.position.y = otherTransform.position.y - entityCollider.size.y
+            entityTransform.position.y =
+              otherTransform.position.y - entityCollider.size.y
             velocity.y = 0
           }
         }
@@ -212,7 +273,6 @@ class PhysicsSystem extends System {
   }
 }
 
-// TODO: F3 to toggle debug
 class DebugInfo extends System {
   debug: string[] = []
 
@@ -231,6 +291,12 @@ class DebugInfo extends System {
     const { velocity, speed } = player.get(Velocity)
     context.fillText(`velocity: x=${velocity.x}, y=${velocity.y}`, 20, 40)
     context.fillText(`speed: ${speed}`, 20, 60)
+    
+    const {collision } = player.get(BoxCollider)
+    context.fillText(`collision: ${collision}`, 20, 80)
+
+    const jump = player.get(Jump)
+    context.fillText(`jump: canJump=${jump.canJump}, count=${jump.count}, maxCount=${jump.maxCount}, onGroundTimer=${jump.onGroundTimer}`, 20, 100)
 
     // this.scene.entities.forEach((entity, i) => {
     //   const { collision } = entity.get(BoxCollider)
@@ -262,20 +328,24 @@ class DebugInfo extends System {
 const scene = new Scene()
 scene
   .addSystem(new InputSystem())
+  .addSystem(new JumpSystem())
   .addSystem(new MovementSystem())
   .addSystem(new PhysicsSystem())
   .addSystem(new ShapeRenderer())
   .addSystem(new CollisionRenderer())
   .addSystem(new DebugInfo())
 
-const player = new Entity(1)
-player
-  .add(new Transform(new Vector(64*10, 64*9), new Vector(32, 32)))
-  .add(new Velocity())
-  .add(new Shape("blue"))
-  .add(new Input())
-  .add(new BoxCollider(new Vector(24, 24)))
-scene.addEntity(player)
+function createPlayer() {
+  const player = new Entity(1)
+  player
+    .add(new Transform(new Vector(64 * 10, 64 * 9), new Vector(32, 32)))
+    .add(new Velocity())
+    .add(new Shape("blue"))
+    .add(new Input())
+    .add(new BoxCollider(new Vector(24, 24)))
+    .add(new Jump())
+  return player
+}
 
 function createBox(id: number, position: Vector, size: Vector) {
   const thing = new Entity(id)
@@ -287,20 +357,21 @@ function createBox(id: number, position: Vector, size: Vector) {
   return thing
 }
 
+scene.addEntity(createPlayer())
+
 scene
-.addEntity(createBox(3, new Vector(64 * 5, 64 * 7), new Vector(64 * 4, 64)))
-.addEntity(createBox(4, new Vector(64 * 12, 64 * 9), new Vector(64, 64)))
-.addEntity(createBox(5, new Vector(64 * 2, 64 * 9), new Vector(64, 64)))
-.addEntity(createBox(2, new Vector(64, 64 * 10), new Vector(64 * 14, 64)))
+  .addEntity(createBox(3, new Vector(64 * 5, 64 * 7), new Vector(64 * 4, 64)))
+  .addEntity(createBox(4, new Vector(64 * 11, 64 * 9), new Vector(64, 64)))
+  .addEntity(createBox(5, new Vector(64 * 13, 64 * 8.5), new Vector(64, 64 * 1.5)))
+  .addEntity(createBox(6, new Vector(64 * 15, 64 * 8), new Vector(64, 64 * 2)))
+  .addEntity(createBox(7, new Vector(64 * 2, 64 * 9), new Vector(64, 64)))
+  .addEntity(createBox(2, new Vector(64, 64 * 10), new Vector(64 * 16, 64)))
 
 scene.init()
-
-/** Tests */
 
 /** Game loop */
 
 const timer = new Timer((dt: number) => {
   scene.update(dt)
 })
-
 timer.start()

@@ -59,7 +59,10 @@ How To Make A JavaScript Platformer
 
 - Fix: velocity, speed, drag, gravity, no-fly, double-jump
 - NPC & collision
-- Finish debugsystem, where to put code ? scene ? game ? ...systems ?
+- Debugsystem
+  - toggle
+  - where to put code ? scene ? game ? ...systems ?
+- Respawn when falling out of the world
 - Coin & collision with different response
 - Design a level
 - Projectile weapon
